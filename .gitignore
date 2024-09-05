@@ -1,0 +1,26 @@
+# ignore compile
+target/
+*.class
+
+# ignore IDE configration
+.idea/
+*.iml
+
+# ignore .log
+*.log
+
+# ignore OS document
+.DS_Store
+Thumbs.db
+*.db
+
+#ignore .json
+.vscode/
+.json
+
+#ignore metals
+./metals
+
+#ignore Dependencies
+Dependencies.scala
+
