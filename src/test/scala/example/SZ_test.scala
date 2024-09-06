@@ -1,6 +1,6 @@
 package example
 
-class HelloSpec extends munit.FunSuite {
+class SZ_test extends munit.FunSuite {
   test("say hello") {
     assertEquals(Hello.greeting, "hello")
   }

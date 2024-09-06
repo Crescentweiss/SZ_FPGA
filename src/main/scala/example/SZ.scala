@@ -1,6 +1,6 @@
 package example
 
-object Hello extends Greeting with App {
+object SZ extends Greeting with App {
   println(greeting)
 }
 
