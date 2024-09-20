@@ -19,7 +19,9 @@ Thumbs.db
 .json
 
 #ignore metals
-./metals
+./metals/
+.backup_logs/
+.reports/
 
 #ignore Dependencies
 Dependencies.scala
