@@ -19,7 +19,8 @@ object SZData {
     var datareconstruction: Array[Double] = Array.fill(dataset.length)(0.0)
     var flagreconstruction: Array[Boolean] = Array.fill(dataset.length)(false) // true: reconstructed, false: not reconstructed
     var encodedictionary: mutable.Map[Int, String] = mutable.Map()
-    var datacompression: Int = -1  // -1 means empty
+    var datacompression: Array[Long] = Array()  // -1 means 
+    var lastbits: Long = 0 // last Array's bits of compressed data
 }
 
 object SZprediction extends App {
@@ -233,22 +234,57 @@ object SZcompression extends App {
     }
 
     // compress the quantized values by huffman encoding
-    def HuffmanEncoding(quantizedDelta: Array[Int], encodedictionary: mutable.Map[Int, String]): Int = {
-        if (quantizedDelta.isEmpty) return -1
-        // 根据字典压缩数据
-        val compressedData: mutable.StringBuilder = new mutable.StringBuilder()
-        quantizedDelta.foreach(value => {
+    def HuffmanEncoding(quantizedDelta: Array[Int], encodedictionary: mutable.Map[Int, String]): Array[Long] = {
+        if (quantizedDelta.isEmpty) return Array.emptyLongArray
+        // compress data based on the huffman encoding dictionary
+        val longArrayBuffer = mutable.ArrayBuffer[Long]()
+        var currentLong: Long = 0L
+        var bitsFilled: Int = 0
+
+        quantizedDelta.foreach{ value => 
             val code = encodedictionary(value)
-            compressedData.append(code)
-        })
-        // turn the binary string to integer
-        Integer.parseInt(compressedData.toString(), 2)
+            var codeBits = BigInt(code, 2)
+            var codeLength = code.length
+
+            while (codeLength > 0) {
+                val bitsToFill = 64 - bitsFilled
+                val bitsToTake = math.min(bitsToFill, codeLength)
+
+                // pick up codeBits high bits
+                val shiftAmount = codeLength - bitsToTake
+                val bits = (codeBits >> shiftAmount).toLong & ((1L << bitsToTake) - 1)
+
+                // put this bits into currentLong
+                currentLong = (currentLong << bitsToTake) | bits
+                bitsFilled += bitsToTake
+
+                // remove the bits we just took from codeBits
+                codeBits = codeBits & ((BigInt(1) << shiftAmount) - 1)
+                codeLength -= bitsToTake
+
+                // if currentLong is full, add it to the buffer
+                if (bitsFilled == 64) {
+                    longArrayBuffer.append(currentLong)
+                    currentLong = 0L
+                    bitsFilled = 0
+                }
+            }
+        }
+
+        // if there are still bits left, left shift and fill the remaining bits
+        if (bitsFilled > 0) {
+            longArrayBuffer.append(currentLong)
+            lastbits = bitsFilled
+        }
+        longArrayBuffer.toArray
     }
 }
 
 object SZdecompression extends App {
 
 }
+
+//输出compressedRatio, errorBound
 
 object main extends App {
     import SZData._

@@ -72,7 +72,6 @@ class SZpipelineTest extends AnyFunSuite {
     println(datadelta.mkString(" "))
     println(dataquantization.mkString(" "))
     println(datareconstruction.mkString(" "))
-    
     val expecedReconstructedData = Array(4, -2, -2, 0, 20, 0, 26, 35)
     assert(result.sameElements(expecedReconstructedData.map(_.toInt)))
   }
@@ -81,31 +80,31 @@ class SZpipelineTest extends AnyFunSuite {
 class SZcompressionTest extends AnyFunSuite {
   test("HuffmanEncoding should compress dataquantization correctly") {
     val dataquantization = Array(1, 2, 2, 3, 3, 3, 4, 4, 4, 4)
-    val expectedCompression = Integer.parseInt("1101111111010100000", 2)
+    val expectedCompression = Array(java.lang.Long.parseUnsignedLong("1101111111010100000", 2))
     var encodedictionary = mutable.Map[Int, String]()
     val huffmanTree = SZcompression.buildHuffmanTree(dataquantization)
     encodedictionary = SZcompression.generateHuffmanCodes(huffmanTree)
     val result = SZcompression.HuffmanEncoding(dataquantization, encodedictionary)
-    assert(result == expectedCompression)
+    assert(result.sameElements(expectedCompression))
   }
 
   test("HuffmanEncoding should handle empty array") {
     val dataquantization = Array[Int]()
-    val expectedCompression = -1
+    val expectedCompression = Array[Long]()
     var encodedictionary = mutable.Map[Int, String]()
     val huffmanTree = SZcompression.buildHuffmanTree(dataquantization)
     encodedictionary = SZcompression.generateHuffmanCodes(huffmanTree)
     val result = SZcompression.HuffmanEncoding(dataquantization, encodedictionary)
-    assert(result == expectedCompression)
+    assert(result.sameElements(expectedCompression))
   }
 
   test("HuffmanEncoding should handle single element array") {
     val dataquantization = Array(1)
-    val expectedCompression = Integer.parseInt("1", 2) // 0
+    val expectedCompression = Array(java.lang.Long.parseUnsignedLong("1", 2))
     var encodedictionary = mutable.Map[Int, String]()
     val huffmanTree = SZcompression.buildHuffmanTree(dataquantization)
     encodedictionary = SZcompression.generateHuffmanCodes(huffmanTree)
     val result = SZcompression.HuffmanEncoding(dataquantization, encodedictionary)
-    assert(result == expectedCompression)
+    assert(result.sameElements(expectedCompression))
   }
 }
