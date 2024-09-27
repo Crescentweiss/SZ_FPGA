@@ -67,11 +67,11 @@ class SZpipelineTest extends AnyFunSuite {
 
     val result: Array[Int] = SZpipeline.quantizationpipeline()
 
-    println(dataset.mkString(" "))
-    println(dataprediction.mkString(" "))
-    println(datadelta.mkString(" "))
-    println(dataquantization.mkString(" "))
-    println(datareconstruction.mkString(" "))
+    // println(dataset.mkString(" "))
+    // println(dataprediction.mkString(" "))
+    // println(datadelta.mkString(" "))
+    // println(dataquantization.mkString(" "))
+    // println(datareconstruction.mkString(" "))
     val expecedReconstructedData = Array(4, -2, -2, 0, 20, 0, 26, 35)
     assert(result.sameElements(expecedReconstructedData.map(_.toInt)))
   }
@@ -85,6 +85,8 @@ class SZcompressionTest extends AnyFunSuite {
     val huffmanTree = SZcompression.buildHuffmanTree(dataquantization)
     encodedictionary = SZcompression.generateHuffmanCodes(huffmanTree)
     val result = SZcompression.HuffmanEncoding(dataquantization, encodedictionary)
+    // SZcompression.printHuffmanCodes(encodedictionary)
+    // println(result.map(_.toBinaryString).mkString(" "))
     assert(result.sameElements(expectedCompression))
   }
 
