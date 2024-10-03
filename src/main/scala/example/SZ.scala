@@ -6,13 +6,13 @@ import scala.util.control.Breaks._
 
 object SZData {
   // Define a dataset of integers with initial values
+    val eb_2 = 0.2  // 2*eb, eb = 0.1
+    val N = 9  // 2^n + 1, every cycle, input data size <= N
     var dataset: Array[Double] = Array(
         1.53, 2.34, 3.65,
         4.17, 5.92, 6.78,
         7.89, 8.90, 9.01
     )
-    val eb_2 = 0.2  // 2*eb, eb = 0.1
-    val N = 9  // 2^n + 1, every cycle, input data size <= N
     var dataprediction: Array[Double] = Array.fill(dataset.length)(0.0)
     var datadelta: Array[Double] = Array.fill(dataset.length)(0.0)
     var dataquantization: Array[Int] = Array.fill(dataset.length)(0)
@@ -21,6 +21,9 @@ object SZData {
     var encodedictionary: mutable.Map[Int, String] = mutable.Map()
     var datacompression: Array[Long] = Array()  // -1 means 
     var lastbits: Long = 0 // last Array's bits of compressed data
+    var datadecompression: Array[Int] = Array()
+    var datasetrecover: Array[Double] = Array.fill(dataset.length)(0.0)
+    var flagrecover: Array[Boolean] = Array.fill(dataset.length)(false) // true: recovered, false: not recovered
 }
 
 object SZprediction extends App {
@@ -69,13 +72,13 @@ object SZreconstruction extends App {
         return reconstructeddata
     }
 
-    def Truereconstruction(index: Int): Unit = {
-        flagreconstruction(index) = true  // reconstructed
+    def Truereconstruction(flag: Array[Boolean], index: Int): Unit = {
+        flag(index) = true  // reconstructed
     }
 
-    def Falsereconstruction(): Unit = {
+    def Falsereconstruction(flag: Array[Boolean]): Unit = {
         for (index <- dataset.indices) {
-            flagreconstruction(index) = false  // new reconstruction step, not reconstructed
+            flag(index) = false  // new reconstruction step, not reconstructed
         }
     }
 }
@@ -107,7 +110,7 @@ object SZpipeline extends App {
                         datadelta(midindex) = delta(dataset(midindex), dataprediction(midindex))
                         dataquantization(midindex) = quantize(datadelta(midindex))
                         datareconstruction(midindex) = reconstructData(dataprediction(midindex), dataquantization(midindex))
-                        Truereconstruction(midindex)
+                        Truereconstruction(flagreconstruction, midindex)
                     }  
                 }
             }
@@ -127,12 +130,12 @@ object SZpipeline extends App {
                         datadelta(midindex) = delta(dataset(midindex), dataprediction(midindex))
                         dataquantization(midindex) = quantize(datadelta(midindex))
                         datareconstruction(midindex) = reconstructData(dataprediction(midindex), dataquantization(midindex))
-                        Truereconstruction(midindex)
+                        Truereconstruction(flagreconstruction, midindex)
                     }   
                 }
             }
         }
-        Falsereconstruction() // new quantization step
+        Falsereconstruction(flagreconstruction) // new quantization step
         dataquantization
     }
 }
@@ -276,12 +279,87 @@ object SZcompression extends App {
             longArrayBuffer.append(currentLong)
             lastbits = bitsFilled
         }
-        longArrayBuffer.toArray
+        datacompression = longArrayBuffer.toArray
+        datacompression
     }
 }
 
 object SZdecompression extends App {
+    import SZData._
+    import SZprediction._
+    import SZreconstruction._
 
+    def decodeHuffman(huffmanCodes: mutable.Map[Int, String], datacompression: Array[Long], lastbits: Int): Array[Int] = {
+
+        val reverseHuffmanCodes = huffmanCodes.map(_.swap)  
+        val decodedValues = mutable.ArrayBuffer[Int]()
+
+        // Convert compressed data back into a single bitstream string
+        val bitStream = new StringBuilder()
+        datacompression.foreach { longValue =>
+            val binaryString = f"$longValue%64s".replace(' ', '0')  // Convert to 64-bit binary string
+            bitStream.append(binaryString)
+        }
+        // If the last compressed long has fewer bits, remove the padding bits
+        if (lastbits > 0 && lastbits < 64) {
+            bitStream.setLength(bitStream.length - (64 - lastbits))
+        }
+        var buffer = ""
+        // Decode the bit stream by matching against the Huffman code dictionary
+        bitStream.foreach { bit =>
+            buffer += bit  // Append each bit to the buffer
+            if (reverseHuffmanCodes.contains(buffer)) {
+                // When we find a matching code in the Huffman dictionary, append the corresponding value
+                decodedValues.append(reverseHuffmanCodes(buffer).toInt)
+                buffer = ""  // Reset the buffer for the next code
+            }
+        }
+        datadecompression = decodedValues.toArray  // Return the decoded values as an array of integers
+        datadecompression
+    }
+
+    def repipeline(): Array[Double] = {
+        val Ncurrent = datadecompression.length
+        if (Ncurrent == N) {
+            val n = Math.ceil(Math.log(N) / Math.log(2)).toInt + 1
+            for (i <- n to 0 by -1) {
+                for (index <- 0 until N by Math.pow(2, i).toInt) {
+                    val startindex = index
+                    val midindex = if (index + Math.pow(2, i - 1).toInt > N - 1) 0 else index + Math.pow(2, i - 1).toInt
+                    val endindex = Math.min(index + Math.pow(2, i).toInt, N - 1)
+                    breakable {
+                    if (midindex < 0 || midindex >= N || flagrecover(midindex)) {
+                        break()
+                    }
+                    println(datasetrecover.mkString(" "))
+                    print(startindex, midindex, endindex)
+                    dataprediction(midindex) = LinearInterpolationPredictor(datasetrecover, startindex, midindex, endindex)
+                    datasetrecover(midindex) = reconstructData(dataprediction(midindex), datadecompression(midindex))
+                    Truereconstruction(flagrecover, midindex)
+                    }
+                }
+            }
+        } else {
+            val n = Math.ceil(Math.log(Ncurrent) / Math.log(2)).toInt + 1
+            for (i <- n to 0 by -1) {
+                for (index <- 0 until Ncurrent by Math.pow(2, i).toInt) {
+                    val startindex = index
+                    val midindex = if (index + Math.pow(2, i - 1).toInt > Ncurrent - 1) 0 else index + Math.pow(2, i - 1).toInt
+                    val endindex = Math.min(index + Math.pow(2, i).toInt, Ncurrent - 1)
+                    breakable {
+                    if (midindex < 0 || midindex >= Ncurrent || flagrecover(midindex)) {
+                        break()
+                    }
+                    dataprediction(midindex) = LinearInterpolationPredictor(datasetrecover, startindex, midindex, endindex)
+                    datasetrecover(midindex) = reconstructData(dataprediction(midindex), datadecompression(midindex))
+                    Truereconstruction(flagrecover, midindex)
+                    }
+                }
+            }
+        }
+        Falsereconstruction(flagrecover) // new quantization step
+        datasetrecover
+    }
 }
 
 //输出compressedRatio, errorBound
@@ -295,4 +373,34 @@ object main extends App {
     import SZpipeline._
     import SZcompression._
 
+    def Compressionpart(): Unit = {
+        println("Starting the SZ pipeline...")
+        val quantizedData = quantizationpipeline()
+        println(s"Quantized Data: ${quantizedData.mkString(", ")}")
+
+        println("Building Huffman Tree...")
+        val huffmanTree = buildHuffmanTree(quantizedData)
+        printTree(huffmanTree)
+
+        println("Generating Huffman Codes...")
+        val huffmanCodes = generateHuffmanCodes(huffmanTree)
+        printHuffmanCodes(huffmanCodes)
+
+        println("Compressing the quantized data...")
+        val compressedData = HuffmanEncoding(quantizedData, huffmanCodes)
+        val binaryCompressedData = compressedData.map(data => data.toBinaryString)
+        println("Compressed Data in binary format:")
+        binaryCompressedData.foreach(bin => println(f"$bin%s"))
+        println(s"Last bits used in compression: $lastbits")
+
+        val originalSize = dataset.length * 64
+        val compressedSize = compressedData.length * 64 + lastbits
+        val compressionRatio = originalSize.toDouble / compressedSize.toDouble
+        println(f"Compression Ratio: $compressionRatio%.2f")
+
+        println(s"Error Bound (2 * eb): $eb_2")
+    }
+
+    // Calling the Compressionpart function
+    Compressionpart()
 }

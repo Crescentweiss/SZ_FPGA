@@ -110,3 +110,55 @@ class SZcompressionTest extends AnyFunSuite {
     assert(result.sameElements(expectedCompression))
   }
 }
+
+class SZdecompressionTest extends AnyFunSuite {
+
+  test("decodeHuffman should decompress compressed data correctly") {
+    // Setup the Huffman code and compressed data
+    val huffmanCodes = mutable.Map(
+      1 -> "0",
+      2 -> "10",
+      3 -> "110",
+      4 -> "111"
+    )
+
+    // Simulate compressed data (binary string: 0110111110 -> Long array)
+    val compressedData = Array(java.lang.Long.parseUnsignedLong("110111110", 2))
+    val lastbits = 9 // Set lastbits correctly based on the compressed binary string
+
+    // Expected decompressed output
+    val expectedDecompressed = Array(1, 2, 2, 3, 3, 3, 4, 4)
+
+    // Decompress the compressed data using SZdecompression
+    SZdecompression.decodeHuffman(huffmanCodes, compressedData, lastbits)
+
+    // Validate that the decoded values match the expected values
+    assert(SZData.datadecompression.sameElements(expectedDecompressed))
+  }
+
+  test("repipeline should reconstruct dataset correctly") {
+    import SZData._
+    import SZprediction._
+    import SZreconstruction._
+    import SZdecompression._
+
+    datadecompression = Array(4, -2, -2, 0, 20, 0, 26, 35)
+    dataprediction = Array.fill(datadecompression.length)(0.0)
+    datasetrecover = Array.fill(SZData.datadecompression.length)(0.0)
+    flagrecover = Array.fill(SZData.datadecompression.length)(false)
+
+    // control the error bound
+    val eb = SZData.eb_2
+    val result: Array[Double] = SZdecompression.repipeline()
+
+    println(datadecompression.mkString(" "))
+    println(dataprediction.mkString(" "))
+    println(datasetrecover.mkString(" "))
+
+    val expectedRecoveryData = Array(0.8, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7)
+    assert(result.zip(expectedRecoveryData).forall { case (res, exp) => Math.abs(res - exp) < eb }, 
+      "One or more elements differ by more than the error bound"
+    )
+  }
+}
+
