@@ -28,11 +28,9 @@ class SZdelta_test extends FunSuite {
   
     val predicted: Double = 0.0
     val actual: Double = 1.1
-    
+
     val datadelta: Double = delta(actual, predicted)
-
     val expectedDeltas: Double = 1.1
-
     assert(datadelta == expectedDeltas)
   }
 }
@@ -111,9 +109,11 @@ class SZcompressionTest extends AnyFunSuite {
   }
 }
 
-class SZdecompressionTest extends AnyFunSuite {
-
+class SZdecompressionTest extends AnyFunSuite {    
   test("decodeHuffman should decompress compressed data correctly") {
+    import SZData._
+    import SZdecompression._
+
     // Setup the Huffman code and compressed data
     val huffmanCodes = mutable.Map(
       1 -> "0",
@@ -123,18 +123,22 @@ class SZdecompressionTest extends AnyFunSuite {
     )
 
     // Simulate compressed data (binary string: 0110111110 -> Long array)
-    val compressedData = Array(java.lang.Long.parseUnsignedLong("110111110", 2))
-    val lastbits = 9 // Set lastbits correctly based on the compressed binary string
+    val compressedData = Array(java.lang.Long.parseUnsignedLong("110111110010010", 2))
+    val lastbits = 15 // Set lastbits correctly based on the compressed binary string
 
     // Expected decompressed output
-    val expectedDecompressed = Array(1, 2, 2, 3, 3, 3, 4, 4)
+    val expectedDecompressed = Array(3, 4, 3, 1, 2, 1, 2)
 
     // Decompress the compressed data using SZdecompression
     SZdecompression.decodeHuffman(huffmanCodes, compressedData, lastbits)
 
+    // Debugging: print the decoded values
+    println(s"Decoded values: ${SZData.datadecompression.mkString(", ")}")
+
     // Validate that the decoded values match the expected values
     assert(SZData.datadecompression.sameElements(expectedDecompressed))
   }
+
 
   test("repipeline should reconstruct dataset correctly") {
     import SZData._
@@ -151,9 +155,9 @@ class SZdecompressionTest extends AnyFunSuite {
     val eb = SZData.eb_2
     val result: Array[Double] = SZdecompression.repipeline()
 
-    println(datadecompression.mkString(" "))
-    println(dataprediction.mkString(" "))
-    println(datasetrecover.mkString(" "))
+    // println(datadecompression.mkString(" "))
+    // println(dataprediction.mkString(" "))
+    // println(datasetrecover.mkString(" "))
 
     val expectedRecoveryData = Array(0.8, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7)
     assert(result.zip(expectedRecoveryData).forall { case (res, exp) => Math.abs(res - exp) < eb }, 

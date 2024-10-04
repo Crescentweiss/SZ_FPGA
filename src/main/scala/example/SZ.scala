@@ -278,6 +278,8 @@ object SZcompression extends App {
         if (bitsFilled > 0) {
             longArrayBuffer.append(currentLong)
             lastbits = bitsFilled
+        } else {
+            lastbits = 64  // long type, 64 bits
         }
         datacompression = longArrayBuffer.toArray
         datacompression
@@ -290,31 +292,35 @@ object SZdecompression extends App {
     import SZreconstruction._
 
     def decodeHuffman(huffmanCodes: mutable.Map[Int, String], datacompression: Array[Long], lastbits: Int): Array[Int] = {
-
-        val reverseHuffmanCodes = huffmanCodes.map(_.swap)  
+        val reverseHuffmanCodes = huffmanCodes.map(_.swap)  // Reverse the Huffman code map for decoding
         val decodedValues = mutable.ArrayBuffer[Int]()
 
         // Convert compressed data back into a single bitstream string
         val bitStream = new StringBuilder()
-        datacompression.foreach { longValue =>
-            val binaryString = f"$longValue%64s".replace(' ', '0')  // Convert to 64-bit binary string
-            bitStream.append(binaryString)
-        }
-        // If the last compressed long has fewer bits, remove the padding bits
-        if (lastbits > 0 && lastbits < 64) {
-            bitStream.setLength(bitStream.length - (64 - lastbits))
+        
+        // Only add the significant bits from each Long in datacompression
+        datacompression.zipWithIndex.foreach { case (longValue, index) =>
+            val binaryString = java.lang.Long.toBinaryString(longValue)
+            val fullBinaryString = "0" * (64 - binaryString.length) + binaryString // Ensure 64-bit
+            if (index == datacompression.length - 1 && lastbits > 0) {
+            // For the last value, only take the number of bits specified by lastbits
+            bitStream.append(fullBinaryString.takeRight(lastbits))
+            } else {
+            // For the other values, take all 64 bits
+            bitStream.append(fullBinaryString)
+            }
         }
         var buffer = ""
         // Decode the bit stream by matching against the Huffman code dictionary
         bitStream.foreach { bit =>
             buffer += bit  // Append each bit to the buffer
             if (reverseHuffmanCodes.contains(buffer)) {
-                // When we find a matching code in the Huffman dictionary, append the corresponding value
-                decodedValues.append(reverseHuffmanCodes(buffer).toInt)
-                buffer = ""  // Reset the buffer for the next code
+            // When a matching code is found in the Huffman dictionary
+            decodedValues.append(reverseHuffmanCodes(buffer).toInt)
+            buffer = ""  // Reset the buffer for the next code
             }
         }
-        datadecompression = decodedValues.toArray  // Return the decoded values as an array of integers
+        datadecompression = decodedValues.toArray  // Store the decoded values
         datadecompression
     }
 
