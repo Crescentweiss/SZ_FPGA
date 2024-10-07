@@ -3,27 +3,25 @@ package example
 import scala.collection.mutable
 import scala.collection.mutable.PriorityQueue
 import scala.util.control.Breaks._
+import scala.util.Random
 
 object SZData {
   // Define a dataset of integers with initial values
-    val eb_2 = 0.2  // 2*eb, eb = 0.1
-    val N = 9  // 2^n + 1, every cycle, input data size <= N
-    var dataset: Array[Double] = Array(
-        1.53, 2.34, 3.65,
-        4.17, 5.92, 6.78,
-        7.89, 8.90, 9.01
-    )
-    var dataprediction: Array[Double] = Array.fill(dataset.length)(0.0)
-    var datadelta: Array[Double] = Array.fill(dataset.length)(0.0)
-    var dataquantization: Array[Int] = Array.fill(dataset.length)(0)
-    var datareconstruction: Array[Double] = Array.fill(dataset.length)(0.0)
-    var flagreconstruction: Array[Boolean] = Array.fill(dataset.length)(false) // true: reconstructed, false: not reconstructed
+    val eb = 0.01  // eb = 0.1
+    val eb_2 = 2*eb  // 2*eb, eb = 0.1
+    val N = 129  // 2^n + 1, every cycle, input data size <= N
+    var dataset: Array[Double] = Array.fill(N)(BigDecimal(Random.nextDouble() * 100).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble)
+    var dataprediction: Array[Double] = Array.fill(N)(0.0)
+    var datadelta: Array[Double] = Array.fill(N)(0.0)
+    var dataquantization: Array[Int] = Array.fill(N)(0)
+    var datareconstruction: Array[Double] = Array.fill(N)(0.0)
+    var flagreconstruction: Array[Boolean] = Array.fill(N)(false) // true: reconstructed, false: not reconstructed
     var encodedictionary: mutable.Map[Int, String] = mutable.Map()
     var datacompression: Array[Long] = Array()  // -1 means 
-    var lastbits: Long = 0 // last Array's bits of compressed data
+    var lastbits: Int = 0 // last Array's bits of compressed data
     var datadecompression: Array[Int] = Array()
-    var datasetrecover: Array[Double] = Array.fill(dataset.length)(0.0)
-    var flagrecover: Array[Boolean] = Array.fill(dataset.length)(false) // true: recovered, false: not recovered
+    var datasetrecover: Array[Double] = Array.fill(N)(0.0)
+    var flagrecover: Array[Boolean] = Array.fill(N)(false) // true: recovered, false: not recovered
 }
 
 object SZprediction extends App {
@@ -279,7 +277,7 @@ object SZcompression extends App {
             longArrayBuffer.append(currentLong)
             lastbits = bitsFilled
         } else {
-            lastbits = 64  // long type, 64 bits
+            lastbits = 64  // equal to long type, 64 bits
         }
         datacompression = longArrayBuffer.toArray
         datacompression
@@ -337,8 +335,6 @@ object SZdecompression extends App {
                     if (midindex < 0 || midindex >= N || flagrecover(midindex)) {
                         break()
                     }
-                    println(datasetrecover.mkString(" "))
-                    print(startindex, midindex, endindex)
                     dataprediction(midindex) = LinearInterpolationPredictor(datasetrecover, startindex, midindex, endindex)
                     datasetrecover(midindex) = reconstructData(dataprediction(midindex), datadecompression(midindex))
                     Truereconstruction(flagrecover, midindex)
@@ -368,7 +364,7 @@ object SZdecompression extends App {
     }
 }
 
-//输出compressedRatio, errorBound
+//output compressedRatio, errorBound
 
 object main extends App {
     import SZData._
@@ -378,6 +374,7 @@ object main extends App {
     import SZreconstruction._
     import SZpipeline._
     import SZcompression._
+    import SZdecompression._
 
     def Compressionpart(): Unit = {
         println("Starting the SZ pipeline...")
@@ -386,7 +383,8 @@ object main extends App {
 
         println("Building Huffman Tree...")
         val huffmanTree = buildHuffmanTree(quantizedData)
-        printTree(huffmanTree)
+        println("Huffman Tree built successfully!")
+        // printTree(huffmanTree)
 
         println("Generating Huffman Codes...")
         val huffmanCodes = generateHuffmanCodes(huffmanTree)
@@ -404,9 +402,33 @@ object main extends App {
         val compressionRatio = originalSize.toDouble / compressedSize.toDouble
         println(f"Compression Ratio: $compressionRatio%.2f")
 
-        println(s"Error Bound (2 * eb): $eb_2")
+        println(s"Error Bound (eb): $eb")
     }
 
-    // Calling the Compressionpart function
+    def Decompressionpart(): Unit = {
+        println("Starting Huffman Decompression...")
+        val huffmanCodes = generateHuffmanCodes(buildHuffmanTree(dataquantization))
+        val decompressedData = decodeHuffman(huffmanCodes, datacompression, lastbits)
+        println(s"Decompressed Data: ${decompressedData.mkString(", ")}")
+
+        println("Starting the SZ Repipeline for data recovery...")
+        val recoveredData = repipeline()
+        println("data recovered complete")
+
+        // Calculate the average error between the original dataset and the recovered data
+        val errors = dataset.zip(recoveredData).map { case (original, recovered) =>
+            math.abs(original - recovered)
+        }
+        val averageError = errors.sum / errors.length
+        println(f"Average reconstruction error: $averageError%.4f")
+        val maxError = errors.max
+        println(f"Max reconstruction error: $maxError%.4f")
+    }
+
+    // Calling the Compression and Decompression functions
     Compressionpart()
+    Decompressionpart()
+    
+    println(s"Original Data: ${dataset.mkString(", ")}")
+    println(s"Recovered Data: ${datasetrecover.mkString(", ")}")
 }
