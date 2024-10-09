@@ -4,12 +4,14 @@ import scala.collection.mutable
 import scala.collection.mutable.PriorityQueue
 import scala.util.control.Breaks._
 import scala.util.Random
+import chisel3._
+import chisel3.util._
 
 object SZData {
   // Define a dataset of integers with initial values
-    val eb = 0.01  // eb = 0.1
+    val eb = 0.1  // eb = 0.1
     val eb_2 = 2*eb  // 2*eb, eb = 0.1
-    val N = 129  // 2^n + 1, every cycle, input data size <= N
+    val N = 17  // 2^n + 1, every cycle, input data size <= N
     var dataset: Array[Double] = Array.fill(N)(BigDecimal(Random.nextDouble() * 100).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble)
     var dataprediction: Array[Double] = Array.fill(N)(0.0)
     var datadelta: Array[Double] = Array.fill(N)(0.0)
