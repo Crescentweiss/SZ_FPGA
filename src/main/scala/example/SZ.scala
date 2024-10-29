@@ -4,8 +4,6 @@ import scala.collection.mutable
 import scala.collection.mutable.PriorityQueue
 import scala.util.control.Breaks._
 import scala.util.Random
-import chisel3._
-import chisel3.util._
 
 object SZData {
   // Define a dataset of integers with initial values

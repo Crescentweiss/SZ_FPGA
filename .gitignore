@@ -26,3 +26,7 @@ Thumbs.db
 #ignore Dependencies
 Dependencies.scala
 
+#ignore .generated except .v
+.generated
+*.json
+*.fir

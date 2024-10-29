@@ -133,7 +133,7 @@ class SZdecompressionTest extends AnyFunSuite {
     SZdecompression.decodeHuffman(huffmanCodes, compressedData, lastbits)
 
     // Debugging: print the decoded values
-    println(s"Decoded values: ${SZData.datadecompression.mkString(", ")}")
+    // println(s"Decoded values: ${SZData.datadecompression.mkString(", ")}")
 
     // Validate that the decoded values match the expected values
     assert(SZData.datadecompression.sameElements(expectedDecompressed))
