@@ -19,7 +19,7 @@ Thumbs.db
 .json
 
 #ignore metals
-./metals/
+.metals/
 .backup_logs/
 .reports/
 
@@ -30,3 +30,6 @@ Dependencies.scala
 .generated
 *.json
 *.fir
+
+#ignore test_run_dir
+test_run_dir/
