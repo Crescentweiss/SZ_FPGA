@@ -5,7 +5,7 @@ import chisel3.util._
 
 object SZHDParameters {
   // 定义参数和变量
-  val N = 5 // 2^n + 1, input data size per cycle <= N
+  val N = 17 // 2^n + 1, input data size per cycle <= N
   val eb = 10.S(32.W) // Example value for error bound
   val eb_2 = eb * 2.S(32.W)
 }

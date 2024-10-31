@@ -13,7 +13,7 @@ class SZHDPredictor extends Module with SZHDVariables {
         val prediction = Output(SInt(32.W))
     })
 
-    // 将输入赋值给 dataset
+    // 将输入赋值给 datareconstruction
     datareconstruction := io.in
 
     // 定义线性插值预测函数
