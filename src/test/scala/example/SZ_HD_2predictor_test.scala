@@ -3,28 +3,42 @@ package example
 import chisel3._
 import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
+import SZHDParameters._
 
 class SZHDPredictorTest extends AnyFlatSpec with ChiselScalatestTester {
   "SZHDPredictor" should "correctly compute linear interpolation predictions using datareconstruction" in {
     test(new SZHDPredictor) { dut =>
+      
+      // Helper function to convert Double to scaled SInt
+      def toScaledSInt(d: Double): SInt = {
+        (d * scale).toInt.S(fixedPointWidth.W)
+      }
+
       val testData = Seq(
         // (input sequence, startindex, midindex, endindex, expected prediction)
-        (Seq(1.S, 2.S, 3.S, 4.S, 5.S) ++ Seq.fill(12)(0.S), 0.U, 2.U, 4.U, 3.S),  // Normal case
-        (Seq(1.S, 2.S, 3.S, 4.S, 5.S) ++ Seq.fill(12)(0.S), 0.U, 0.U, 4.U, 0.S),  // mid == start
-        (Seq(1.S, 2.S, 3.S, 4.S, 5.S) ++ Seq.fill(12)(0.S), 0.U, 4.U, 4.U, 1.S),  // mid == end
-        (Seq(-3.S, 0.S, 3.S, 6.S, 9.S) ++ Seq.fill(12)(0.S), 1.U, 2.U, 4.U, 3.S)  // Other cases
+        (Seq(1.0, 2.0, 3.0, 4.0, 5.0) ++ Seq.fill(12)(0.0), 0.U, 2.U, 4.U, 3.0),  // Normal interpolation case
+        (Seq(1.0, 2.0, 3.0, 4.0, 5.0) ++ Seq.fill(12)(0.0), 0.U, 0.U, 4.U, 0.0),  // mid == start, prediction should be 0
+        (Seq(1.0, 2.0, 3.0, 4.0, 5.0) ++ Seq.fill(12)(0.0), 0.U, 4.U, 4.U, 1.0),  // mid == end, prediction should be datareconstruction(0)
+        (Seq(-3.0, 0.0, 3.0, 6.0, 9.0) ++ Seq.fill(12)(0.0), 1.U, 2.U, 4.U, 3.0)  // Other interpolation case
       )
-      // 遍历每个测试用例
+
+      // Iterate through each test case
       for ((inVec, startIdx, midIdx, endIdx, expectedPrediction) <- testData) {
-        // 设置输入数据
-        dut.io.in.zip(inVec).foreach { case (inPort, value) => inPort.poke(value) }
+        
+        // Set input data, converting each element to scaled SInt
+        dut.io.in.zip(inVec).foreach { case (inPort, value) => 
+          inPort.poke(toScaledSInt(value))
+        }
+        
         dut.io.startindex.poke(startIdx)
         dut.io.midindex.poke(midIdx)
         dut.io.endindex.poke(endIdx)
-        // 运行一个时钟周期
+
+        // Run a clock cycle
         dut.clock.step(1)
-        // 检查预测输出是否符合预期
-        dut.io.prediction.expect(expectedPrediction)
+
+        // Check if the prediction output matches the expected scaled value
+        dut.io.prediction.expect(toScaledSInt(expectedPrediction))
       }
     }
   }
