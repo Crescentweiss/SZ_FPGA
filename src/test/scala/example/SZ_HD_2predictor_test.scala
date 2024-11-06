@@ -11,7 +11,7 @@ class SZHDPredictorTest extends AnyFlatSpec with ChiselScalatestTester {
       
       // Helper function to convert Double to scaled SInt
       def toScaledSInt(d: Double): SInt = {
-        (d * scale).toInt.S(fixedPointWidth.W)
+        (d * scaleHD).toInt.S(fixedPointWidthHD.W)
       }
 
       val testData = Seq(

@@ -4,28 +4,28 @@ import chisel3._
 import chisel3.util._
 
 object SZHDParameters {
-  val scale = 1000000 // Scaling factor to approximate float precision, around 10^-6 precision
-  val fixedPointWidth = 32 // Using 32-bit SInt to approximate float32
+  val scaleHD = 1000000 // Scaling factor to approximate float precision, around 10^-6 precision
+  val fixedPointWidthHD = 32 // Using 32-bit SInt to approximate float32
 
   // Define as SInt instead of FixedPoint for scaled floating-point representation
-  val intType = SInt(fixedPointWidth.W) // Define as 32-bit width
-  val N = 17 // 2^n + 1, input data size <= N
-  val eb = (1 * scale).toInt.S(fixedPointWidth.W) // Scale the error bound as an SInt
-  val eb_2 = (2 * scale).toInt.S(fixedPointWidth.W) // Scale the error bound multiplied by 2
+  val intTypeHD = SInt(fixedPointWidthHD.W) // Define as 32-bit width
+  val NHD = 17 // 2^n + 1, input data size <= N
+  val ebHD = (0.1 * scaleHD).toInt.S(fixedPointWidthHD.W) // Scale the error bound as an SInt
+  val eb2HD = (0.2 * scaleHD).toInt.S(fixedPointWidthHD.W) // Scale the error bound as an SInt
 }
 
 trait SZHDVariables {
   import SZHDParameters._
 
-  val dataset = Reg(Vec(N, intType))
-  val dataprediction = Reg(Vec(N, intType))
-  val datadelta = Reg(Vec(N, intType))
-  val dataquantization = Reg(Vec(N, SInt(16.W))) // Keep quantization data as 16-bit SInt
-  val datareconstruction = Reg(Vec(N, intType))
-  val flagreconstruction = RegInit(VecInit(Seq.fill(N)(false.B))) // Boolean (bit) type
-  val datacompression = Reg(Vec(N, UInt(32.W))) // Unsigned integer for compression
-  val lastbits = RegInit(0.U(6.W)) // Last few bits of compressed data
-  val datadecompression = Reg(Vec(N, SInt(16.W))) // Use SInt for decompression data
-  val datasetrecover = Reg(Vec(N, intType))
-  val flagrecover = RegInit(VecInit(Seq.fill(N)(false.B))) // Boolean (bit) type
+  val datasetHD = Reg(Vec(NHD, intTypeHD))
+  val datapredictionHD = Reg(Vec(NHD, intTypeHD))
+  val datadeltaHD = Reg(Vec(NHD, intTypeHD))
+  val dataquantizationHD = Reg(Vec(NHD, SInt(16.W))) // Keep quantization data as 16-bit SInt
+  val datareconstructionHD = Reg(Vec(NHD, intTypeHD))
+  val flagreconstructionHD = RegInit(VecInit(Seq.fill(NHD)(false.B))) // Boolean (bit) type
+  val datacompressionHD = Reg(Vec(NHD, UInt(32.W))) // Unsigned integer for compression
+  val lastbitsHD = RegInit(0.U(6.W)) // Last few bits of compressed data
+  val datadecompressionHD = Reg(Vec(NHD, SInt(16.W))) // Use SInt for decompression data
+  val datasetrecoverHD = Reg(Vec(NHD, intTypeHD))
+  val flagrecoverHD = RegInit(VecInit(Seq.fill(NHD)(false.B))) // Boolean (bit) type
 }

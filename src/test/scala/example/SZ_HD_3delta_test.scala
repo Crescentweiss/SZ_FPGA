@@ -9,7 +9,7 @@ class SZHDDeltaTest extends AnyFlatSpec with ChiselScalatestTester {
   "SZHDDelta" should "calculate the correct delta" in {
     test(new SZHDDelta) { dut =>
       // Helper function to apply scaling
-      def toScaledSInt(d: Int): SInt = (d * scale).S
+      def toScaledSInt(d: Int): SInt = (d * scaleHD).S
 
       // Test case 1: actual = 15, predicted = 10, expected delta = 5
       dut.io.actual.poke(toScaledSInt(15))

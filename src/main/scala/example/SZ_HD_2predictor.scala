@@ -6,15 +6,12 @@ import SZHDParameters._
 
 class SZHDPredictor extends Module with SZHDVariables {
   val io = IO(new Bundle {
-    val in = Input(Vec(N, intType)) // Use global intType for scaled integer input
+    val in = Input(Vec(NHD, intTypeHD)) // Use global intTypeHD for scaled integer input
     val startindex = Input(UInt(5.W))
     val midindex = Input(UInt(5.W))
     val endindex = Input(UInt(5.W))
-    val prediction = Output(intType) // Use global intType for scaled integer output
+    val prediction = Output(intTypeHD) // Use global intTypeHD for scaled integer output
   })
-
-  // Assign the input to datareconstruction (now uses scaled SInt)
-  datareconstruction := io.in
 
   // Define the linear interpolation predictor function to match your logic
   def linearInterpolationPredictor(
@@ -25,15 +22,15 @@ class SZHDPredictor extends Module with SZHDVariables {
     val size = (endindex - startindex).asSInt
     val left = (midindex - startindex).asSInt
     val right = (endindex - midindex).asSInt
-    val prediction = Wire(intType)
+    val prediction = Wire(intTypeHD)
 
     when(midindex === startindex) {
       prediction := 0.S // If at start, prediction is 0
     }.elsewhen(midindex === endindex) {
-      prediction := datareconstruction(0) // Use the value at index 0 for the end case
+      prediction := io.in(0) // Use the value at index 0 for the end case
     }.otherwise {
       // Perform the scaled linear interpolation calculation
-      prediction := (datareconstruction(startindex) * right / size) + (datareconstruction(endindex) * left / size)
+      prediction := (io.in(startindex) * right / size) + (io.in(endindex) * left / size)
     }
     prediction
   }
