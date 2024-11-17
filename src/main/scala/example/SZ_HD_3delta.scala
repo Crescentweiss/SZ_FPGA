@@ -5,15 +5,32 @@ import chisel3.util._
 import SZHDParameters._
 
 class SZHDDelta extends Module with SZHDVariables {
-  // Define inputs and outputs for delta calculation
   val io = IO(new Bundle {
-    val actual = Input(SInt(32.W))
-    val predicted = Input(SInt(32.W))
-    val deltaOut = Output(SInt(32.W))
+    val actual = Input(intTypeHD)
+    val predicted = Input(intTypeHD)
+    val deltaOut = Output(intTypeHD)
+    val enable = Input(Bool())
+    val done = Output(Bool())
   })
 
-  // Calculate the difference between actual and predicted values
-  io.deltaOut := io.actual - io.predicted
+  // Initialize output
+  io.deltaOut := 0.S
+  io.done := false.B
+
+  // 状态寄存器
+  val deltaReg = RegInit(0.S(intTypeHD.getWidth.W))
+  val doneReg = RegInit(false.B)
+  
+  when(io.enable) {
+    deltaReg := io.actual - io.predicted
+    doneReg := true.B
+  }.otherwise {
+    deltaReg := deltaReg
+    doneReg := false.B
+  }
+
+  io.deltaOut := deltaReg
+  io.done := doneReg
 }
 
 object SZHDDeltaMain extends App {

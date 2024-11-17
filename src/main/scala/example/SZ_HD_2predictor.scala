@@ -6,40 +6,41 @@ import SZHDParameters._
 
 class SZHDPredictor extends Module with SZHDVariables {
   val io = IO(new Bundle {
-    val in = Input(Vec(NHD, intTypeHD)) // Use global intTypeHD for scaled integer input
-    val startindex = Input(UInt(5.W))
-    val midindex = Input(UInt(5.W))
-    val endindex = Input(UInt(5.W))
-    val prediction = Output(intTypeHD) // Use global intTypeHD for scaled integer output
+    val in = Input(Vec(NHD, intTypeHD))
+    val startindex = Input(indexWidthHD)
+    val midindex = Input(indexWidthHD)
+    val endindex = Input(indexWidthHD)
+    val prediction = Output(intTypeHD)
+    val enable = Input(Bool())
+    val done = Output(Bool())
   })
 
-  // Define the linear interpolation predictor function to match your logic
-  def linearInterpolationPredictor(
-      startindex: UInt,
-      midindex: UInt,
-      endindex: UInt
-  ): SInt = {
-    val size = (endindex - startindex).asSInt
-    val left = (midindex - startindex).asSInt
-    val right = (endindex - midindex).asSInt
-    val prediction = Wire(intTypeHD)
+  // Initialize output
+  io.prediction := 0.S
+  io.done := false.B
 
-    when(midindex === startindex) {
-      prediction := 0.S // If at start, prediction is 0
-    }.elsewhen(midindex === endindex) {
-      prediction := io.in(0) // Use the value at index 0 for the end case
+  // 状态寄存器
+  val predictionReg = RegInit(0.S(intTypeHD.getWidth.W))
+  val doneReg = RegInit(false.B)
+
+  // 预测逻辑
+  when(io.enable) {
+    when(io.midindex === io.startindex) {
+      predictionReg := 0.S
+    }.elsewhen(io.midindex === io.endindex) {
+      predictionReg := io.in(0)  
     }.otherwise {
-      // Perform the scaled linear interpolation calculation
-      prediction := (io.in(startindex) * right / size) + (io.in(endindex) * left / size)
+      predictionReg := (io.in(io.startindex) + io.in(io.endindex)) >> 1
     }
-    prediction
+    doneReg := true.B
+  }.otherwise {
+    predictionReg := predictionReg
+    doneReg := false.B
   }
 
-  // Call the linear interpolation predictor function and get the prediction result
-  val predictedValue = linearInterpolationPredictor(io.startindex, io.midindex, io.endindex)
-
-  // Output the prediction result
-  io.prediction := predictedValue
+  // 输出连接
+  io.prediction := predictionReg
+  io.done := doneReg
 }
 
 object SZHDPredictorMain extends App {
